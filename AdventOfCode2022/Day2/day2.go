@@ -1,48 +1,48 @@
 package main
 
 import (
-    "bufio"
-    "fmt"
-    "os"
+	"bufio"
+	"fmt"
+	"os"
 	"strings"
 )
 
 func main() {
-	fmt.Println(Challenge("./chall_input.txt"));
+	fmt.Println(Challenge("./chall_input.txt"))
 }
 
 func Challenge(fileName string) (int, int) {
-	readfile, err := os.Open(fileName);
+	readfile, err := os.Open(fileName)
 
 	if err != nil {
-		fmt.Println(err);
-		return -1, -1;
+		fmt.Println(err)
+		return -1, -1
 	}
 
-	guide := initializeVictoryGuide();
-	treacheryGuide := initializeTreacheryGuide();
+	guide := initializeVictoryGuide()
+	treacheryGuide := initializeTreacheryGuide()
 
-	finalScoreWithoutRigging := 0;
-	finalScoreWithRigging := 0;
+	finalScoreWithoutRigging := 0
+	finalScoreWithRigging := 0
 
-	fileScanner := bufio.NewScanner(readfile);
-	fileScanner.Split(bufio.ScanLines);
+	fileScanner := bufio.NewScanner(readfile)
+	fileScanner.Split(bufio.ScanLines)
 
 	for fileScanner.Scan() {
-		str := fileScanner.Text();
-		guideline := strings.Split(str, " ");
+		str := fileScanner.Text()
+		guideline := strings.Split(str, " ")
 		if len(guideline) < 2 {
-			continue;
+			continue
 		}
-		finalScoreWithoutRigging += guide[guideline[1]][guideline[0]];
-		finalScoreWithRigging += treacheryGuide[guideline[1]][guideline[0]];
+		finalScoreWithoutRigging += guide[guideline[1]][guideline[0]]
+		finalScoreWithRigging += treacheryGuide[guideline[1]][guideline[0]]
 	}
 
-	return finalScoreWithoutRigging, finalScoreWithRigging;
+	return finalScoreWithoutRigging, finalScoreWithRigging
 }
 
 func initializeVictoryGuide() map[string]map[string]int {
-	guide := map[string]map[string]int{};
+	guide := map[string]map[string]int{}
 
 	guide["X"] = make(map[string]int)
 	guide["X"]["A"] = 4
@@ -59,11 +59,11 @@ func initializeVictoryGuide() map[string]map[string]int {
 	guide["Z"]["B"] = 9
 	guide["Z"]["C"] = 6
 
-	return guide;
+	return guide
 }
 
-func initializeTreacheryGuide() map[string]map[string]int{
-	guide := map[string]map[string]int{};
+func initializeTreacheryGuide() map[string]map[string]int {
+	guide := map[string]map[string]int{}
 
 	guide["X"] = make(map[string]int)
 	guide["X"]["A"] = 3
@@ -80,5 +80,5 @@ func initializeTreacheryGuide() map[string]map[string]int{
 	guide["Z"]["B"] = 9
 	guide["Z"]["C"] = 7
 
-	return guide;
+	return guide
 }
