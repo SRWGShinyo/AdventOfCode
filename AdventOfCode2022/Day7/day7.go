@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	fmt.Println(Challenge("./chall_input.txt", 100000))
+	fmt.Println(Challenge("./chall_input.txt", 70000000, 30000000))
 }
 
-func Challenge(fileName string, wantedSize int) int {
+func Challenge(fileName string, fullStorage int, wantedForUpdate int) int {
 	readfile, err := os.Open(fileName)
 
 	if err != nil {
@@ -27,8 +27,19 @@ func Challenge(fileName string, wantedSize int) int {
 
 	finalTree := ConstructTree(fileScanner)
 	tree.PrintTree(finalTree)
+	tree.ComputeSize(finalTree)
 
-	return -1
+	tree.GetWantedSize(finalTree, 100000)
+
+	spaceToFree := wantedForUpdate - (fullStorage - finalTree.Size)
+	if spaceToFree <= 0 {
+		fmt.Println("No need to free up any space.")
+		return finalTree.Size
+	}
+
+	tree.GetFolderToDelete(finalTree, spaceToFree)
+
+	return finalTree.Size
 }
 
 func ConstructTree(fileScanner *bufio.Scanner) *tree.Node {
