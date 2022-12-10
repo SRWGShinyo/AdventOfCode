@@ -81,8 +81,7 @@ func Challenge(fileName string, deviceConfig CommDeviceConfig) int {
 		}
 	}
 
-	PrintCrtDraw(CRTState)
-
+	fmt.Println(CRTState.Drawing)
 	return CPUPower
 }
 
@@ -93,39 +92,21 @@ func updateCRTDrawing(crtState CRTState, cpuState CPUState) CRTState {
 		intervalCPULow = 1
 	}
 	intervalCPUHigh := cpuState.XValue + 1 + (cpuState.SpriteWideness / 2)
-	fmt.Printf("low interval is %d, high interval is %d, middle is %d, index is %d\n", intervalCPULow, intervalCPUHigh, cpuState.XValue+1, crtState.Index)
 
 	if crtState.Index >= intervalCPULow && crtState.Index <= intervalCPUHigh {
-		fmt.Println("Drawing #")
 		crtState.Drawing += "#"
 	} else {
-		fmt.Println("Drawing .")
 		crtState.Drawing += "."
 	}
 
-	if (len(crtState.Drawing))%crtState.Wideness == 0 {
-		fmt.Printf("%d is len opf crt so we go back\n", len(crtState.Drawing))
+	if crtState.Index%crtState.Wideness == 0 {
 		crtState.Index = 0
+		crtState.Drawing += "\n"
 	}
 	crtState.Index += 1
 
 	return crtState
 }
-
-func PrintCrtDraw(state CRTState) {
-	tempStr := ""
-	for _, rne := range state.Drawing {
-		if len(tempStr)%state.Wideness == 0 {
-			fmt.Println(tempStr)
-			tempStr = ""
-		}
-
-		tempStr += string(rne)
-	}
-
-	fmt.Println(tempStr)
-}
-
 func noop(state CPUState) <-chan (CPUState) {
 	chnl := make(chan CPUState)
 	go func() {
