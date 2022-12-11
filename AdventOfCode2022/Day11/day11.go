@@ -52,8 +52,6 @@ func Challenge(fileName string, roundsNumber int) int {
 		}
 	}
 
-	fmt.Printf("%d is the moduloProductValue\n", moduloProduct.Int64())
-
 	for i := 0; i < roundsNumber; i++ {
 		for j := 0; j < len(monkeys); j++ {
 			monkea := monkeys[j]
