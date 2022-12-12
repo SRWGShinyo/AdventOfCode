@@ -11,3 +11,13 @@ type Node struct {
 	PathToAccess int
 	Visited      bool
 }
+
+func ChildContains(nodeParent *Node, nodeChild *Node) bool {
+	for _, nde := range nodeParent.Children {
+		if nde == nodeChild {
+			return true
+		}
+	}
+
+	return false
+}
