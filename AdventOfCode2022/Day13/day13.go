@@ -8,14 +8,6 @@ import (
 	"strings"
 )
 
-type State int
-
-const (
-	FALSE   State = -1
-	NEUTRAL State = 0
-	TRUE    State = 1
-)
-
 func main() {
 	fmt.Println(Challenge("./chall_input.txt"))
 }
