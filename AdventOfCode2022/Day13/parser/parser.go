@@ -131,7 +131,6 @@ func createElemValueFromString(elemAsValue string) *Element {
 
 	value, err := strconv.Atoi(elemAsValue)
 	if err != nil {
-		fmt.Printf("%s is not a number. Returning nil.\n", elemAsValue)
 		return nil
 	}
 
