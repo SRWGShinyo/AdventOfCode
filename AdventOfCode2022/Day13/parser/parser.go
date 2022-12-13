@@ -2,11 +2,19 @@ package parser
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
 type Entry string
 type Symbol rune
+type State int
+
+const (
+	FALSE   State = -1
+	NEUTRAL State = 0
+	TRUE    State = 1
+)
 
 const (
 	LIST  Entry = "LIST"
@@ -26,13 +34,13 @@ type Element struct {
 	Value    int
 }
 
-type Sos struct {
+type Sequence struct {
 	Entries []*Element
 }
 
-func GetSosFromString(sosAsString string) *Sos {
+func GetSosFromString(sosAsString string) *Sequence {
 
-	finalSos := &Sos{}
+	finalSos := &Sequence{}
 	tempValue := ""
 
 	for len(sosAsString) > 0 {
@@ -138,7 +146,7 @@ func createElemValueFromString(elemAsValue string) *Element {
 	return finElem
 }
 
-func PrintSos(sosToprint *Sos) {
+func PrintSequence(sosToprint *Sequence) {
 	fmt.Printf("[")
 	for _, elem := range sosToprint.Entries {
 		PrintElem(elem)
@@ -159,3 +167,98 @@ func PrintElem(elemToPrint *Element) {
 	}
 	fmt.Printf(" }")
 }
+
+func ParseSequence(pair1 string) *Sequence {
+	sos1 := GetSosFromString(pair1)
+
+	return sos1
+}
+
+func CompareSequence(pair1 *Sequence, pair2 *Sequence) bool {
+	areOrdered := NEUTRAL
+	minIndex := int(math.Min(float64(len(pair2.Entries)), float64(len(pair1.Entries))))
+
+	for indx := 0; indx < minIndex; indx++ {
+		areOrdered = CompareElems(pair1.Entries[indx], pair2.Entries[indx])
+		if areOrdered == TRUE {
+			return true
+		}
+		if areOrdered == FALSE {
+			return false
+		}
+	}
+
+	if len(pair1.Entries) < len(pair2.Entries) {
+		return true
+	}
+
+	return false
+}
+
+func CompareElems(elem1 *Element, elem2 *Element) State {
+	if elem1.Elemtp == VALUE && elem2.Elemtp == VALUE {
+		return giveStateFromComparison(elem1.Value, elem2.Value)
+	}
+
+	if elem1.Elemtp == LIST && elem2.Elemtp == LIST {
+		tempOrdered := NEUTRAL
+		minIndex := int(math.Min(float64(len(elem1.ElemList)), float64(len(elem2.ElemList))))
+		for indx := 0; indx < minIndex; indx++ {
+			tempOrdered = CompareElems(elem1.ElemList[indx], elem2.ElemList[indx])
+			if tempOrdered != NEUTRAL {
+				return tempOrdered
+			}
+		}
+
+		if len(elem1.ElemList) < len(elem2.ElemList) {
+			return TRUE
+		} else if len(elem1.ElemList) == len(elem2.ElemList) {
+			return NEUTRAL
+		}
+
+		return FALSE
+	}
+
+	if elem1.Elemtp == VALUE {
+		elem1.Elemtp = LIST
+		newElemValue := &Element{Elemtp: VALUE, Value: elem1.Value}
+		elem1.Value = 0
+		elem1.ElemList = []*Element{newElemValue}
+
+		return CompareElems(elem1, elem2)
+	}
+
+	if elem2.Elemtp == VALUE {
+		elem2.Elemtp = LIST
+		newElemValue := &Element{Elemtp: VALUE, Value: elem2.Value}
+		elem2.Value = 0
+		elem2.ElemList = []*Element{newElemValue}
+
+		return CompareElems(elem1, elem2)
+	}
+
+	fmt.Println("For some reason, we reached this part ?")
+	return FALSE
+}
+
+func giveStateFromComparison(value1 int, value2 int) State {
+	if value1 < value2 {
+		return TRUE
+	}
+
+	if value1 > value2 {
+		return FALSE
+	}
+
+	return NEUTRAL
+}
+
+// This is for sorting operations
+
+type SequenceOrder []*Sequence
+
+// By allowing SequenceOrder to implement Len, Less and Swap,
+// we can use the sort package to compute the result in O(nlog(n))
+func (so SequenceOrder) Len() int           { return len(so) }
+func (so SequenceOrder) Less(i, j int) bool { return CompareSequence(so[i], so[j]) }
+func (so SequenceOrder) Swap(i, j int)      { so[i], so[j] = so[j], so[i] }
