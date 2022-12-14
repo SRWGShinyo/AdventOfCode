@@ -15,7 +15,7 @@ type Coordinate struct {
 }
 
 func main() {
-	fmt.Println(Challenge("./chall_input.txt"))
+	fmt.Println(Challenge("./example_input.txt"))
 }
 
 func Challenge(fileName string) int {
@@ -63,17 +63,17 @@ func Challenge(fileName string) int {
 		}
 	}
 
-	lowestCoords := Coordinate{XCoord: lowestXForARock, YCoord: lowestYForARock}
-	highestCoords := Coordinate{XCoord: highestXForARock, YCoord: highestYForARock}
+	lowestCoords := Coordinate{XCoord: lowestXForARock - 5000, YCoord: 0}
+	highestCoords := Coordinate{XCoord: highestXForARock + 5000, YCoord: highestYForARock + 1}
 
 	cavernSlice = FullCavernSliceMap(cavernSlice, lowestCoords, highestCoords)
 
-	numberOfGrain := 0
+	numberOfGrain := 1
 	startPoint := Coordinate{XCoord: 500, YCoord: 0}
 	for true {
 
-		newSlice, hasExitedSlice := MakeGrainFall(cavernSlice, startPoint, lowestCoords, highestCoords)
-		if hasExitedSlice {
+		newSlice, hasTouchedEntry := MakeGrainFallChall2(cavernSlice, startPoint, lowestCoords, highestCoords)
+		if hasTouchedEntry {
 			break
 		}
 
@@ -81,7 +81,7 @@ func Challenge(fileName string) int {
 		numberOfGrain += 1
 	}
 
-	PrintCavernSlice(cavernSlice, lowestCoords, highestCoords)
+	//PrintCavernSlice(cavernSlice, lowestCoords, highestCoords)
 
 	return numberOfGrain
 }
@@ -90,12 +90,75 @@ func Split(rne rune) bool {
 	return rne == ' ' || rne == '-' || rne == '>'
 }
 
-func MakeGrainFall(cavernSlice map[int]map[int]string, startCoord Coordinate, lowestCoords Coordinate, highestCoords Coordinate) (map[int]map[int]string, bool) {
+func MakeGrainFallChall2(cavernSlice map[int]map[int]string, startCoord Coordinate, lowestCoords Coordinate, highestCoords Coordinate) (map[int]map[int]string, bool) {
+	grainCoord := Coordinate{XCoord: startCoord.XCoord, YCoord: startCoord.YCoord}
+
+	for true {
+		lowerCheck, newGrainCoord := checkLowerChall2(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if lowerCheck {
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		diagLeftCheck, newGrainCoord := checkDiagLeftChall2(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if diagLeftCheck {
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		diagRightCheck, newGrainCoord := checkDiagRightChall2(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if diagRightCheck {
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		cavernSlice[grainCoord.XCoord][grainCoord.YCoord] = "o"
+		if grainCoord.XCoord == startCoord.XCoord && grainCoord.YCoord == startCoord.YCoord {
+			return cavernSlice, true
+		}
+
+		return cavernSlice, false
+	}
+
+	return cavernSlice, false
+}
+func checkLowerChall2(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+	grainCoord.YCoord += 1
+	if grainCoord.YCoord >= highestCoorsd.YCoord+2 {
+		return false, grainCoord
+	}
+
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func checkDiagLeftChall2(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+
+	grainCoord.YCoord += 1
+	grainCoord.XCoord -= 1
+
+	if grainCoord.YCoord >= highestCoorsd.YCoord+2 {
+		return false, grainCoord
+	}
+
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func checkDiagRightChall2(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+	grainCoord.YCoord += 1
+	grainCoord.XCoord += 1
+
+	if grainCoord.YCoord >= highestCoorsd.YCoord+2 {
+		return false, grainCoord
+	}
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func MakeGrainFallChall1(cavernSlice map[int]map[int]string, startCoord Coordinate, lowestCoords Coordinate, highestCoords Coordinate) (map[int]map[int]string, bool) {
 	grainCoord := Coordinate{XCoord: startCoord.XCoord, YCoord: startCoord.YCoord}
 	isRested := false
 
 	for !isRested {
-		lowerCheck, newGrainCoord := checkLower(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		lowerCheck, newGrainCoord := checkLowerChall1(cavernSlice, grainCoord, lowestCoords, highestCoords)
 		if lowerCheck {
 			if newGrainCoord.XCoord == -1 {
 				return cavernSlice, true
@@ -105,7 +168,7 @@ func MakeGrainFall(cavernSlice map[int]map[int]string, startCoord Coordinate, lo
 			continue
 		}
 
-		diagLeftCheck, newGrainCoord := checkDiagLeft(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		diagLeftCheck, newGrainCoord := checkDiagLeftChall1(cavernSlice, grainCoord, lowestCoords, highestCoords)
 		if diagLeftCheck {
 			if newGrainCoord.XCoord == -1 {
 				return cavernSlice, true
@@ -115,7 +178,7 @@ func MakeGrainFall(cavernSlice map[int]map[int]string, startCoord Coordinate, lo
 			continue
 		}
 
-		diagRightCheck, newGrainCoord := checkDiagRight(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		diagRightCheck, newGrainCoord := checkDiagRightChall1(cavernSlice, grainCoord, lowestCoords, highestCoords)
 		if diagRightCheck {
 			if newGrainCoord.XCoord == -1 {
 				return cavernSlice, true
@@ -131,8 +194,7 @@ func MakeGrainFall(cavernSlice map[int]map[int]string, startCoord Coordinate, lo
 
 	return cavernSlice, false
 }
-
-func checkLower(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+func checkLowerChall1(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
 	grainCoord.YCoord += 1
 	if checkOutOfBound(grainCoord, lowestCoords, highestCoorsd) {
 		return true, Coordinate{XCoord: -1, YCoord: -1}
@@ -140,7 +202,7 @@ func checkLower(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowes
 	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
 }
 
-func checkDiagLeft(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+func checkDiagLeftChall1(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
 
 	grainCoord.YCoord += 1
 	grainCoord.XCoord -= 1
@@ -152,7 +214,7 @@ func checkDiagLeft(cavernSlice map[int]map[int]string, grainCoord Coordinate, lo
 	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
 }
 
-func checkDiagRight(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+func checkDiagRightChall1(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
 	grainCoord.YCoord += 1
 	grainCoord.XCoord += 1
 
