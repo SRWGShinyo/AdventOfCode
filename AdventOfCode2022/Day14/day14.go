@@ -15,7 +15,7 @@ type Coordinate struct {
 }
 
 func main() {
-	fmt.Println(Challenge("./example_input.txt"))
+	fmt.Println(Challenge("./chall_input.txt"))
 }
 
 func Challenge(fileName string) int {
@@ -63,15 +63,128 @@ func Challenge(fileName string) int {
 		}
 	}
 
-	PrintCavernSlice(cavernSlice,
-		Coordinate{XCoord: lowestXForARock, YCoord: lowestYForARock},
-		Coordinate{XCoord: highestXForARock, YCoord: highestYForARock})
+	lowestCoords := Coordinate{XCoord: lowestXForARock, YCoord: lowestYForARock}
+	highestCoords := Coordinate{XCoord: highestXForARock, YCoord: highestYForARock}
 
-	return 0
+	cavernSlice = FullCavernSliceMap(cavernSlice, lowestCoords, highestCoords)
+
+	numberOfGrain := 0
+	startPoint := Coordinate{XCoord: 500, YCoord: 0}
+	for true {
+
+		newSlice, hasExitedSlice := MakeGrainFall(cavernSlice, startPoint, lowestCoords, highestCoords)
+		if hasExitedSlice {
+			break
+		}
+
+		cavernSlice = newSlice
+		numberOfGrain += 1
+	}
+
+	PrintCavernSlice(cavernSlice, lowestCoords, highestCoords)
+
+	return numberOfGrain
 }
 
 func Split(rne rune) bool {
 	return rne == ' ' || rne == '-' || rne == '>'
+}
+
+func MakeGrainFall(cavernSlice map[int]map[int]string, startCoord Coordinate, lowestCoords Coordinate, highestCoords Coordinate) (map[int]map[int]string, bool) {
+	grainCoord := Coordinate{XCoord: startCoord.XCoord, YCoord: startCoord.YCoord}
+	isRested := false
+
+	for !isRested {
+		lowerCheck, newGrainCoord := checkLower(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if lowerCheck {
+			if newGrainCoord.XCoord == -1 {
+				return cavernSlice, true
+			}
+
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		diagLeftCheck, newGrainCoord := checkDiagLeft(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if diagLeftCheck {
+			if newGrainCoord.XCoord == -1 {
+				return cavernSlice, true
+			}
+
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		diagRightCheck, newGrainCoord := checkDiagRight(cavernSlice, grainCoord, lowestCoords, highestCoords)
+		if diagRightCheck {
+			if newGrainCoord.XCoord == -1 {
+				return cavernSlice, true
+			}
+
+			grainCoord = newGrainCoord
+			continue
+		}
+
+		cavernSlice[grainCoord.XCoord][grainCoord.YCoord] = "o"
+		return cavernSlice, false
+	}
+
+	return cavernSlice, false
+}
+
+func checkLower(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+	grainCoord.YCoord += 1
+	if checkOutOfBound(grainCoord, lowestCoords, highestCoorsd) {
+		return true, Coordinate{XCoord: -1, YCoord: -1}
+	}
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func checkDiagLeft(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+
+	grainCoord.YCoord += 1
+	grainCoord.XCoord -= 1
+
+	if checkOutOfBound(grainCoord, lowestCoords, highestCoorsd) {
+		return true, Coordinate{XCoord: -1, YCoord: -1}
+	}
+
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func checkDiagRight(cavernSlice map[int]map[int]string, grainCoord Coordinate, lowestCoords Coordinate, highestCoorsd Coordinate) (bool, Coordinate) {
+	grainCoord.YCoord += 1
+	grainCoord.XCoord += 1
+
+	if checkOutOfBound(grainCoord, lowestCoords, highestCoorsd) {
+		return true, Coordinate{XCoord: -1, YCoord: -1}
+	}
+	return cavernSlice[grainCoord.XCoord][grainCoord.YCoord] == ".", grainCoord
+}
+
+func checkOutOfBound(grainCoord Coordinate, lowestCoords Coordinate, highestCoords Coordinate) bool {
+	if grainCoord.XCoord > highestCoords.XCoord || grainCoord.XCoord < lowestCoords.XCoord {
+		return true
+	}
+
+	if grainCoord.YCoord > highestCoords.YCoord || grainCoord.YCoord < lowestCoords.YCoord {
+		return true
+	}
+	return false
+}
+
+func FullCavernSliceMap(cavernSlice map[int]map[int]string, lowestCoordinates Coordinate, highestCoordinates Coordinate) map[int]map[int]string {
+	for yc := lowestCoordinates.YCoord; yc < highestCoordinates.YCoord+1; yc++ {
+		for xc := lowestCoordinates.XCoord; xc < highestCoordinates.XCoord+1; xc++ {
+			if _, exists := cavernSlice[xc]; !exists {
+				cavernSlice[xc] = make(map[int]string)
+			}
+			if _, exists := cavernSlice[xc][yc]; !exists {
+				cavernSlice[xc][yc] = "."
+			}
+		}
+	}
+	return cavernSlice
 }
 
 func RetrieveCoordinates(coords []string) Coordinate {
@@ -158,15 +271,7 @@ func PrintCavernSlice(cavernSlice map[int]map[int]string, lowestCoordinates Coor
 	fmt.Printf("%d, %d, %d,%d \n", lowestCoordinates.XCoord, lowestCoordinates.YCoord, highestCoordinates.XCoord, highestCoordinates.YCoord)
 	for yc := lowestCoordinates.YCoord; yc < highestCoordinates.YCoord+1; yc++ {
 		for xc := lowestCoordinates.XCoord; xc < highestCoordinates.XCoord+1; xc++ {
-			if _, exists := cavernSlice[xc]; !exists {
-				fmt.Printf(".")
-				continue
-			}
-			if _, exists := cavernSlice[xc][yc]; !exists {
-				fmt.Printf(".")
-			} else {
-				fmt.Printf(cavernSlice[xc][yc])
-			}
+			fmt.Printf(cavernSlice[xc][yc])
 		}
 		fmt.Println()
 	}
