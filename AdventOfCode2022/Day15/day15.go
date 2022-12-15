@@ -6,52 +6,110 @@ import (
 	"main/coordinates"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	fmt.Println(Challenge("./example_input.txt"))
+	fmt.Println(Challenge("./chall_input.txt", 10, 4000000))
+}
+
+type SensorAndBeacon struct {
+	sensorCoord coordinates.Coordinate
+	beaconCoord coordinates.Coordinate
 }
 
 type Marker rune
 
-const (
-	EMPTY   Marker = '.'
-	SCANNED Marker = '#'
-	SENSOR  Marker = 'S'
-	BEACON  Marker = 'B'
-)
-
-func Challenge(fileName string) int {
+func Challenge(fileName string, lineNumber int64, maxForInterval int64) (int, int64) {
 	readfile, err := os.Open(fileName)
 
 	if err != nil {
 		fmt.Println(err)
-		return -1
+		return -1, -1
 	}
 
 	fileScanner := bufio.NewScanner(readfile)
 	fileScanner.Split(bufio.ScanLines)
 
-	scanningMap := make(map[int64]map[int64]rune)
-	highestCoordinates := coordinates.Coordinate{XCoord: math.MinInt, YCoord: math.MaxInt}
-	lowestCoordinates := coordinates.Coordinate{XCoord: math.MaxInt, YCoord: math.MaxInt}
+	allBeacAndSensInfo := []SensorAndBeacon{}
 
 	for fileScanner.Scan() {
 		inpts := FilterStringArrayToIntValue(strings.FieldsFunc(fileScanner.Text(), Split))
 		sensorCoordinates := coordinates.Coordinate{XCoord: inpts[0], YCoord: inpts[1]}
 		beaconCoordinates := coordinates.Coordinate{XCoord: inpts[2], YCoord: inpts[3]}
 
-		scannerMap, tempHighAndLow := AddSensorRangeAndBeacon(scanningMap, sensorCoordinates, beaconCoordinates)
-
-		scanningMap = scannerMap
-		highestCoordinates = coordinates.GetHighestFromBoth(highestCoordinates, tempHighAndLow[0])
-		lowestCoordinates = coordinates.GetLowestFromBoth(lowestCoordinates, tempHighAndLow[1])
-
+		allBeacAndSensInfo = append(allBeacAndSensInfo, SensorAndBeacon{sensorCoord: sensorCoordinates, beaconCoord: beaconCoordinates})
 	}
 
-	return -1
+	_, finalNumber := GetIntervalLinesForGivenNumber(allBeacAndSensInfo, lineNumber)
+	value := int64(0)
+
+	for i := int64(0); i < maxForInterval; i++ {
+		intervalsFin, _ := GetIntervalLinesForGivenNumber(allBeacAndSensInfo, i)
+		if len(intervalsFin) > 1 {
+			fmt.Printf("x: %d y: %d\n", (intervalsFin[0].XCoordMax+intervalsFin[1].XCoordMin)/2, i)
+			value = (intervalsFin[0].XCoordMax+intervalsFin[1].XCoordMin)/2*4000000 + i
+			break
+		}
+	}
+
+	return finalNumber, value
+}
+
+func GetIntervalLinesForGivenNumber(sensorsAndBeacon []SensorAndBeacon, lineNumber int64) ([]coordinates.XInterval, int) {
+	knownBeacons := []coordinates.Coordinate{}
+	intervals := []coordinates.XInterval{}
+
+	for _, sensAndBeacon := range sensorsAndBeacon {
+		sensorCoordinates := sensAndBeacon.sensorCoord
+		beaconCoordinates := sensAndBeacon.beaconCoord
+
+		manDistance := coordinates.ComputeManhattanDistance(sensorCoordinates, beaconCoordinates)
+		if !IsBeaconAlreadyKnow(knownBeacons, beaconCoordinates) {
+			knownBeacons = append(knownBeacons, beaconCoordinates)
+		}
+
+		// check if the line is in the range of our sensor
+		if IsInRange(lineNumber, sensorCoordinates.YCoord-manDistance, sensorCoordinates.YCoord+manDistance) {
+			// We know then that all the coordinates from [sensor.X - manDistance, lineNumber]
+			// to [sensor.X + manDistance, lineNumber] are in range
+			rng := manDistance - int64(math.Abs(float64(sensorCoordinates.YCoord)-float64(lineNumber)))
+			intervals = append(intervals, coordinates.XInterval{XCoordMin: sensorCoordinates.XCoord - rng, XCoordMax: sensorCoordinates.XCoord + rng})
+		}
+	}
+
+	sort.Sort(coordinates.SequenceOrder(intervals))
+
+	finalIntervals := []coordinates.XInterval{}
+	targetInterval := intervals[0]
+
+	for i := 1; i < len(intervals); i++ {
+		canBeFused, Fusion := coordinates.TryToFuse(targetInterval, intervals[i])
+		if canBeFused {
+			targetInterval = Fusion
+			continue
+		}
+
+		finalIntervals = append(finalIntervals, coordinates.XInterval{XCoordMin: targetInterval.XCoordMin, XCoordMax: targetInterval.XCoordMax})
+		targetInterval = Fusion
+	}
+
+	finalIntervals = append(finalIntervals, targetInterval)
+	finalNumber := 0
+
+	for _, interv := range finalIntervals {
+		valueToAdd := coordinates.NumberOfPointsInInterval(interv)
+		for _, beacon := range knownBeacons {
+			if IsInRange(beacon.XCoord, interv.XCoordMin, interv.XCoordMax) && beacon.YCoord == lineNumber {
+				valueToAdd -= 1
+			}
+		}
+		finalNumber += int(valueToAdd)
+	}
+
+	return finalIntervals, finalNumber
 }
 
 func Split(rne rune) bool {
@@ -63,7 +121,6 @@ func FilterStringArrayToIntValue(vs []string) []int64 {
 	for _, v := range vs {
 		num, err := strconv.Atoi(v)
 		if err != nil {
-			fmt.Printf("%s is not an int, continuing.\n", v)
 			continue
 		}
 
@@ -73,52 +130,16 @@ func FilterStringArrayToIntValue(vs []string) []int64 {
 	return filtered
 }
 
-func DoesEntryExistInScannerMapX(maps map[int64]map[int64]rune, XCoord int64) bool {
-	if _, exists := maps[XCoord]; exists {
-		return true
+func IsInRange(toCompare int64, lowRange int64, highRange int64) bool {
+	return lowRange <= toCompare && toCompare <= highRange
+}
+
+func IsBeaconAlreadyKnow(knownBeacons []coordinates.Coordinate, newCoord coordinates.Coordinate) bool {
+	for _, coord := range knownBeacons {
+		if coordinates.CoordinateEquals(coord, newCoord) {
+			return true
+		}
 	}
 
 	return false
-}
-
-func DoesEntryExistInScannerMapY(maps map[int64]map[int64]rune, XCoord int64, YCoord int64) bool {
-	if _, exists := maps[XCoord][YCoord]; exists {
-		return true
-	}
-
-	return false
-}
-
-func AddSensorRangeAndBeacon(mapScanner map[int64]map[int64]rune, sensorCoordinates coordinates.Coordinate, beaconCoordinate coordinates.Coordinate) (map[int64]map[int64]rune, []coordinates.Coordinate) {
-	tempHighAndLow := []coordinates.Coordinate{{XCoord: math.MinInt, YCoord: math.MinInt}, {XCoord: math.MaxInt, YCoord: math.MinInt}}
-
-	return mapScanner, tempHighAndLow
-}
-
-func AddCoordinateToMap(mapScanner map[int64]map[int64]rune, coordinateToAdd coordinates.Coordinate, symbolToAdd Marker) map[int64]map[int64]rune {
-	if !DoesEntryExistInScannerMapX(mapScanner, coordinateToAdd.XCoord) {
-		mapScanner[coordinateToAdd.XCoord] = make(map[int64]rune)
-		mapScanner[coordinateToAdd.XCoord][coordinateToAdd.YCoord] = rune(symbolToAdd)
-
-		return mapScanner
-	}
-
-	if !DoesEntryExistInScannerMapY(mapScanner, coordinateToAdd.XCoord, coordinateToAdd.YCoord) {
-		mapScanner[coordinateToAdd.XCoord][coordinateToAdd.YCoord] = rune(symbolToAdd)
-		return mapScanner
-	}
-
-	actualValue := mapScanner[coordinateToAdd.XCoord][coordinateToAdd.YCoord]
-	if actualValue == rune(BEACON) || actualValue == rune(SENSOR) {
-		fmt.Printf("There is already a %s at position %d, %d. Not adding %s.\n", string(actualValue), coordinateToAdd.XCoord, coordinateToAdd.YCoord, string(symbolToAdd))
-		return mapScanner
-	}
-
-	if actualValue == rune(SCANNED) && symbolToAdd == EMPTY {
-		fmt.Printf("There is already a %s at position %d, %d. Not adding %s.\n", string(actualValue), coordinateToAdd.XCoord, coordinateToAdd.YCoord, string(symbolToAdd))
-		return mapScanner
-	}
-
-	mapScanner[coordinateToAdd.XCoord][coordinateToAdd.YCoord] = rune(symbolToAdd)
-	return mapScanner
 }
